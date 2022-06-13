@@ -36,7 +36,6 @@ local chip8_mt = aux.class()
 
 ffi.metatype("chip8_t", chip8_mt)
 
-
 local function Chip8(rom, rom_size)
   local vm = ffi_new "chip8_t"
 
@@ -55,10 +54,13 @@ end
 _M.Chip8 = Chip8
 
 -- main
+local mod_name = ...
 local argc = #arg
-if true then
+if mod_name == nil then
   local vm = Chip8()
 
   assert(vm.I == 0, "I == 0")
   assert(vm.pc == ENTRY_BASE, "vm.pc == ENTRY_BASE")
 end
+
+return _M
