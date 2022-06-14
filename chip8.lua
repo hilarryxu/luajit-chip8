@@ -19,6 +19,7 @@ local bnot = bit.bnot
 local band, bor, bxor = bit.band, bit.bor, bit.bxor
 local lshift, rshift = bit.lshift, bit.rshift
 local str_fmt = string.format
+local floor = math.floor
 
 ffi.cdef [[
 typedef struct chip8 {
@@ -122,9 +123,25 @@ end
 
 function chip8_mt.get_pixel(vm, x, y)
   local index = (y * SCREEN_WIDTH) + x
-  local byte_index = math.floor(index / 8)
+  local byte_index = floor(index / 8)
   local offset = index % 8
   return band(vm.screen[byte_index], rshift(0x80, offset))
+end
+
+function chip8_mt.set_pixel(vm, x, y, on)
+  local index = (y * SCREEN_WIDTH) + x
+  local byte_index = floor(index / 8)
+  local offset = index % 8
+  local value = vm.screen[byte_index]
+  local mask = rshift(0x80, offset)
+
+  if on then
+    value = bor(value, mask)
+  else
+    value = band(value, bnot(mask))
+  end
+
+  vm.screen[byte_index] = value
 end
 
 function chip8_mt.run(vm)
