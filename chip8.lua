@@ -19,7 +19,7 @@ local bnot = bit.bnot
 local band, bor, bxor = bit.band, bit.bor, bit.bxor
 local lshift, rshift = bit.lshift, bit.rshift
 local str_fmt = string.format
-local floor = math.floor
+local floor, min = math.floor, math.min
 
 ffi.cdef [[
 typedef struct chip8 {
@@ -91,7 +91,38 @@ local opcode_map = {
   end,
   -- Dxyn - DRW Vx, Vy, nibble
   [0xD] = function(vm, opcode)
-    assert(false, str_fmt("invalid opcode: %04x", opcode))
+    local start_x = vm.V[band(rshift(opcode, 8), 0xf)]
+    local start_y = vm.V[band(rshift(opcode, 4), 0xf)]
+    local n = band(opcode, 0xf)
+
+    if start_x >= SCREEN_WIDTH then
+      start_x = start_x % SCREEN_WIDTH
+    end
+    if start_y >= SCREEN_HEIGHT then
+      start_y = start_y % SCREEN_HEIGHT
+    end
+
+    local end_x = min(start_x + 8, SCREEN_WIDTH)
+    local end_y = min(start_y + n, SCREEN_HEIGHT)
+
+    vm.V[0xf] = 0
+
+    for y = start_y, end_y - 1 do
+      local sprite_byte = vm.ram[vm.I + (y - start_y)]
+      for x = start_x, end_x - 1 do
+        -- NOTE: sprite_pixel and screen_pixel are 0 or non-zero
+        -- not 0 or 1 !!!
+        local sprite_pixel = band(sprite_byte, rshift(0x80, x - start_x))
+        local screen_pixel = vm:get_pixel(x, y)
+
+        if sprite_pixel ~= 0 then
+          if screen_pixel ~= 0 then
+            vm.V[0xf] = 1
+          end
+          vm:set_pixel(x, y, screen_pixel == 0)
+        end
+      end
+    end
   end,
 }
 
@@ -107,7 +138,7 @@ end
 
 function chip8_mt.execute_next_opcode(vm)
   local opcode = vm:get_next_opcode()
-  _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
+  -- _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
 
   if opcode ~= nil then
     local op = rshift(opcode, 12)
@@ -167,6 +198,8 @@ function chip8_mt.run(vm)
         end
       end
     until has_event == false
+
+    vm:execute_next_opcode()
 
     if clock:getElapsedTime():asMilliseconds() >= fps_interval_ms then
       app:clear(Color(0x11, 0x1D, 0x2B))
