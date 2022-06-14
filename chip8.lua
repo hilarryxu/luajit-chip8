@@ -135,6 +135,11 @@ function chip8_mt.run(vm)
   rect_shape:setSize(scale_x, scale_y)
   rect_shape:setFillColor(Color(0x8F, 0x91, 0x85))
 
+  local fps = 60
+  local fps_interval_ms = 1000.0 / fps -- ms
+  local clock = Clock()
+  clock:restart()
+
   while app:isOpen() do
     repeat
       local has_event, evt = app:pollEvent()
@@ -146,16 +151,20 @@ function chip8_mt.run(vm)
       end
     until has_event == false
 
-    app:clear(Color(0x11, 0x1D, 0x2B))
-
-    rect_shape:setPosition(3 * scale_x, 4 * scale_y)
-    app:drawRectangleShape(rect_shape)
-    rect_shape:setPosition(6 * scale_x, 7 * scale_y)
-    app:drawRectangleShape(rect_shape)
-    rect_shape:setPosition(12 * scale_x, 20 * scale_y)
-    app:drawRectangleShape(rect_shape)
-
-    app:display()
+    if clock:getElapsedTime():asMilliseconds() >= fps_interval_ms then
+      app:clear(Color(0x11, 0x1D, 0x2B))
+      for y = 0, SCREEN_HEIGHT - 1 do
+        for x = 0, SCREEN_WIDTH - 1 do
+          local screen_pixel = vm:get_pixel(x, y)
+          if screen_pixel ~= 0 then
+            rect_shape:setPosition(x * scale_x, y * scale_y)
+            app:drawRectangleShape(rect_shape)
+          end
+        end
+      end
+      app:display()
+      clock:restart()
+    end
 
     Sleep(1)
   end
