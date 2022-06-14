@@ -56,6 +56,27 @@ local opcode_map = {
       assert(false, str_fmt("invalid opcode: %04x", opcode))
     end
   end,
+  -- 1nnn - JP addr
+  [0x1] = function(vm, opcode)
+    vm.pc = band(opcode, 0xfff)
+  end,
+  -- 6xkk - LD Vx, byte
+  [0x6] = function(vm, opcode)
+    vm.V[band(rshift(opcode, 8), 0xf)] = band(opcode, 0xff)
+  end,
+  -- 7xkk - ADD Vx, byte
+  [0x7] = function(vm, opcode)
+    local x = band(rshift(opcode, 8), 0xf)
+    vm.V[x] = band(vm.V[x] + band(opcode, 0xff), 0xff)
+  end,
+  -- Annn - LD I, addr
+  [0xA] = function(vm, opcode)
+    vm.I = band(opcode, 0xfff)
+  end,
+  -- Dxyn - DRW Vx, Vy, nibble
+  [0xD] = function(vm, opcode)
+    assert(false, str_fmt("invalid opcode: %04x", opcode))
+  end,
 }
 
 local chip8_mt = aux.class()
