@@ -3,6 +3,16 @@ local bit = require "bit"
 local string = require "string"
 local io = require "io"
 
+local C = ffi.C
+local sfml = require "sfml"
+local sfml_system = require "sfml.system" { path = "./3rd/?.dll" }
+local sfml_window = require "sfml.window" { path = "./3rd/?.dll" }
+local sfml_graphics = require "sfml.graphics" { path = "./3rd/?.dll" }
+
+local Sleep, Clock = sfml_system.Sleep, sfml_system.Clock
+local VideoMode, sfKeyboard_isKeyPressed = sfml_window.VideoMode, sfml_window.sfKeyboard_isKeyPressed
+local RenderWindow, Sprite, Color = sfml_graphics.RenderWindow, sfml_graphics.Sprite, sfml_graphics.Color
+
 local ffi_new, ffi_cast, ffi_copy = ffi.new, ffi.cast, ffi.copy
 local bnot = bit.bnot
 local band, bor, bxor = bit.band, bit.bor, bit.bxor
@@ -31,6 +41,9 @@ typedef struct chip8 {
 ]]
 
 local ENTRY_BASE = 0x200
+
+local SCREEN_WIDTH = 64
+local SCREEN_HEIGHT = 32
 
 local aux = {}
 local _M = {}
@@ -107,8 +120,36 @@ function chip8_mt.clear_screen(vm)
 end
 
 function chip8_mt.run(vm)
-  while true do
-    vm:execute_next_opcode()
+  local scale_x, scale_y = 10, 10
+  local app = RenderWindow(VideoMode(SCREEN_WIDTH * scale_x, SCREEN_HEIGHT * scale_y), "CHIP-8")
+
+  local rect_shape = sfml_graphics.RectangleShape()
+  rect_shape:setSize(scale_x, scale_y)
+  rect_shape:setFillColor(Color(0x8F, 0x91, 0x85))
+
+  while app:isOpen() do
+    repeat
+      local has_event, evt = app:pollEvent()
+      if has_event then
+        if evt.type == C.sfEvtClosed then
+          app:close()
+          break
+        end
+      end
+    until has_event == false
+
+    app:clear(Color(0x11, 0x1D, 0x2B))
+
+    rect_shape:setPosition(3 * scale_x, 4 * scale_y)
+    app:drawRectangleShape(rect_shape)
+    rect_shape:setPosition(6 * scale_x, 7 * scale_y)
+    app:drawRectangleShape(rect_shape)
+    rect_shape:setPosition(12 * scale_x, 20 * scale_y)
+    app:drawRectangleShape(rect_shape)
+
+    app:display()
+
+    Sleep(1)
   end
 end
 
