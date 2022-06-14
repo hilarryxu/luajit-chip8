@@ -70,7 +70,7 @@ end
 
 function chip8_mt.execute_next_opcode(vm)
   local opcode = vm:get_next_opcode()
-  _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
+  -- _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
 
   if opcode ~= nil then
     local op = rshift(opcode, 12)
@@ -104,17 +104,22 @@ end
 
 _M.Chip8 = Chip8
 
+-- tests
+local function test_00e0()
+  local vm = Chip8 "\x00\xe0"
+
+  vm.screen[10] = 1
+  vm:execute_next_opcode()
+  for i = 0, 255 do
+    assert(vm.screen[i] == 0)
+  end
+end
+
 -- main
 local mod_name = ...
 local argc = #arg
 if mod_name == nil then
-  local vm = Chip8 "\x00\xe0"
-  local opcode
-
-  assert(vm.I == 0, "I == 0")
-  assert(vm.pc == ENTRY_BASE, "vm.pc == ENTRY_BASE")
-
-  vm:execute_next_opcode()
+  test_00e0()
 end
 
 return _M
