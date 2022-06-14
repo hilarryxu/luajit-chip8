@@ -1,6 +1,7 @@
 local ffi = require "ffi"
 local bit = require "bit"
 local string = require "string"
+local math = require "math"
 local io = require "io"
 
 local C = ffi.C
@@ -117,6 +118,13 @@ function chip8_mt.clear_screen(vm)
   for i = 0, 255 do
     vm.screen[i] = 0
   end
+end
+
+function chip8_mt.get_pixel(vm, x, y)
+  local index = (y * SCREEN_WIDTH) + x
+  local byte_index = math.floor(index / 8)
+  local offset = index % 8
+  return band(vm.screen[byte_index], rshift(0x80, offset))
 end
 
 function chip8_mt.run(vm)
