@@ -1,10 +1,12 @@
 local ffi = require "ffi"
 local bit = require "bit"
+local string = require "string"
 
 local ffi_new, ffi_cast, ffi_copy = ffi.new, ffi.cast, ffi.copy
 local bnot = bit.bnot
 local band, bor, bxor = bit.band, bit.bor, bit.bxor
 local lshift, rshift = bit.lshift, bit.rshift
+local str_fmt = string.format
 
 ffi.cdef [[
 typedef struct chip8 {
@@ -32,11 +34,29 @@ local ENTRY_BASE = 0x200
 local aux = {}
 local _M = {}
 
+local function _p(fmt, ...)
+  print(str_fmt(fmt, ...))
+end
+
 function aux.class()
   local class = {}
   class.__index = class
   return class
 end
+
+local opcode_map = {
+  -- 0...
+  [0x0] = function(vm, opcode)
+    local low_byte = band(opcode, 0xff)
+
+    if low_byte == 0xE0 then
+      -- 00E0 - CLS
+      vm:clear_screen()
+    else
+      assert(false, str_fmt("invalid opcode: %04x", opcode))
+    end
+  end,
+}
 
 local chip8_mt = aux.class()
 
@@ -46,6 +66,22 @@ function chip8_mt.get_next_opcode(vm)
   local opcode = bor(lshift(vm.ram[vm.pc], 8), vm.ram[vm.pc + 1])
   vm.pc = vm.pc + 2
   return opcode
+end
+
+function chip8_mt.execute_next_opcode(vm)
+  local opcode = vm:get_next_opcode()
+  _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
+
+  if opcode ~= nil then
+    local op = rshift(opcode, 12)
+    opcode_map[op](vm, opcode)
+  end
+end
+
+function chip8_mt.clear_screen(vm)
+  for i = 0, 255 do
+    vm.screen[i] = 0
+  end
 end
 
 ffi.metatype("chip8_t", chip8_mt)
@@ -78,9 +114,7 @@ if mod_name == nil then
   assert(vm.I == 0, "I == 0")
   assert(vm.pc == ENTRY_BASE, "vm.pc == ENTRY_BASE")
 
-  opcode = vm:get_next_opcode()
-  assert(opcode == 0x00e0)
-  assert(vm.pc == ENTRY_BASE + 2)
+  vm:execute_next_opcode()
 end
 
 return _M
