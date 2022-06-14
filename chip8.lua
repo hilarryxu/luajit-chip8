@@ -1,6 +1,7 @@
 local ffi = require "ffi"
 local bit = require "bit"
 local string = require "string"
+local io = require "io"
 
 local ffi_new, ffi_cast, ffi_copy = ffi.new, ffi.cast, ffi.copy
 local bnot = bit.bnot
@@ -91,7 +92,7 @@ end
 
 function chip8_mt.execute_next_opcode(vm)
   local opcode = vm:get_next_opcode()
-  -- _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
+  _p("pc: 0x%03x, opcode: %04x", vm.pc - 2, opcode)
 
   if opcode ~= nil then
     local op = rshift(opcode, 12)
@@ -102,6 +103,12 @@ end
 function chip8_mt.clear_screen(vm)
   for i = 0, 255 do
     vm.screen[i] = 0
+  end
+end
+
+function chip8_mt.run(vm)
+  while true do
+    vm:execute_next_opcode()
   end
 end
 
@@ -125,6 +132,15 @@ end
 
 _M.Chip8 = Chip8
 
+local function readfile(filename)
+  local file = io.open(filename, "rb")
+  if file then
+    local content = file:read "*a"
+    file:close()
+    return content
+  end
+end
+
 -- tests
 local function test_00e0()
   local vm = Chip8 "\x00\xe0"
@@ -140,7 +156,10 @@ end
 local mod_name = ...
 local argc = #arg
 if mod_name == nil then
-  test_00e0()
+  local rom = readfile "roms/IBM"
+  local vm = Chip8(rom)
+
+  vm:run()
 end
 
 return _M
